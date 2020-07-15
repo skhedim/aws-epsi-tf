@@ -1,0 +1,20 @@
+name: 'Terraform GitHub Actions'
+on:
+  - pull_request
+jobs:
+  terraform:
+    name: 'Terraform'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout'
+        uses: actions/checkout@master
+          
+      - uses: hashicorp/setup-terraform@v1
+      
+      - run: terraform init
+      
+      - run: terraform plan
+        env: 
+          AWS_ACCESS_KEY_ID:  ${{ secrets.ACCESS_KEY }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.SECRET_KEY }}
+          AWS_SESSION_TOKEN: ${{ secrets.TOKEN_KEY }}
