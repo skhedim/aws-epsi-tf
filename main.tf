@@ -3,49 +3,12 @@ provider "aws" {
   region  = "us-east-1"
 }
 
-resource "aws_subnet" "public-a" {
-  vpc_id     = aws_vpc.default.id
-  cidr_block = "10.0.1.0/24"
+resource "aws_subnet" "example" {
+  for_each = var.subnet_numbers
 
-  tags = {
-    Name = "public-a-tf"
-  }
-}
-
-resource "aws_subnet" "public-b" {
-  vpc_id     = aws_vpc.default.id
-  cidr_block = "10.0.2.0/24"
-
-  tags = {
-    Name = "public-b-tf"
-  }
-}
-
-resource "aws_subnet" "public-c" {
-  vpc_id     = aws_vpc.default.id
-  cidr_block = "10.0.5.0/24"
-
-  tags = {
-    Name = "public-c-tf"
-  }
-}
-
-resource "aws_subnet" "private-a" {
-  vpc_id     = aws_vpc.default.id
-  cidr_block = "10.0.3.0/24"
-
-  tags = {
-    Name = "private-a-tf"
-  }
-}
-
-resource "aws_subnet" "private-b" {
-  vpc_id     = aws_vpc.default.id
-  cidr_block = "10.0.4.0/24"
-
-  tags = {
-    Name = "private-b-tf"
-  }
+  vpc_id            = aws_vpc.default.id
+  availability_zone = each.value
+  cidr_block        = each.key
 }
 
 resource "aws_vpc" "default" {
@@ -78,12 +41,12 @@ resource "aws_route_table" "r" {
 }
 
 resource "aws_route_table_association" "a" {
-  subnet_id      = aws_subnet.public-a.id
+  subnet_id      = aws_subnet.example["10.0.1.0/24"].id
   route_table_id = aws_route_table.r.id
 }
 
 resource "aws_route_table_association" "b" {
-  subnet_id      = aws_subnet.public-b.id
+  subnet_id      = aws_subnet.example["10.0.2.0/24"].id
   route_table_id = aws_route_table.r.id
 }
 
@@ -100,7 +63,7 @@ resource "aws_key_pair" "deployer" {
 resource "aws_instance" "web" {
   ami           = data.aws_ami.ubuntu.id
   instance_type = var.instance_type
-  subnet_id     = aws_subnet.public-b.id
+  subnet_id     = aws_subnet.example["10.0.1.0/24"].id
   key_name      = aws_key_pair.deployer.id
   associate_public_ip_address = true
   user_data     = data.template_file.ami_name.rendered
