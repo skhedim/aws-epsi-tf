@@ -1,7 +1,5 @@
 provider "aws" {
-  version = "~> 2.0"
   region  = "us-east-1"
-  profile = "epsi"
 }
 
 resource "aws_vpc" "default" {
@@ -9,14 +7,6 @@ resource "aws_vpc" "default" {
   
   tags = {
     Name = "terraform"
-  }
-}
-
-resource "aws_internet_gateway" "gw" {
-  vpc_id = aws_vpc.default.id
-
-  tags = {
-    Name = "igw-tf"
   }
 }
 
@@ -38,6 +28,44 @@ resource "aws_subnet" "public-b" {
   }
 }
 
+resource "aws_subnet" "private-a" {
+  vpc_id     = aws_vpc.default.id
+  cidr_block = "10.0.3.0/24"
+
+  tags = {
+    Name = "public-tf-a"
+  }
+}
+
+resource "aws_subnet" "private-b" {
+  vpc_id     = aws_vpc.default.id
+  cidr_block = "10.0.4.0/24"
+
+  tags = {
+    Name = "public-tf-b"
+  }
+}
+
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.default.id
+
+  tags = {
+    Name = "igw-tf"
+  }
+}
+
+resource "aws_nat_gateway" "gw" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public-a.id
+
+  tags = {
+    Name = "nat-gw-cesi-tf"
+  }
+}
+
+resource "aws_eip" "nat" {
+}
+
 resource "aws_route_table" "r" {
   vpc_id = aws_vpc.default.id
 
@@ -46,7 +74,19 @@ resource "aws_route_table" "r" {
     gateway_id = aws_internet_gateway.gw.id
   }
   tags = {
-    Name = "internet-tf"
+    Name = "public-cesi-tf"
+  }
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.default.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_nat_gateway.gw.id
+  }
+  tags = {
+    Name = "private-cesi-tf"
   }
 }
 
@@ -59,6 +99,17 @@ resource "aws_route_table_association" "b" {
   subnet_id      = aws_subnet.public-b.id
   route_table_id = aws_route_table.r.id
 }
+
+resource "aws_route_table_association" "c" {
+  subnet_id      = aws_subnet.private-a.id
+  route_table_id = aws_route_table.private.id
+}
+
+resource "aws_route_table_association" "d" {
+  subnet_id      = aws_subnet.private-b.id
+  route_table_id = aws_route_table.private.id
+}
+
 
 resource "aws_lb_target_group" "test" {
   name     = "lb-final"
